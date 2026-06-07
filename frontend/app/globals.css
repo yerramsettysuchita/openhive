@@ -91,10 +91,17 @@ h1.hero-title {
 h1.hero-title em { font-style: italic; font-weight: 300; color: var(--muted); }
 .hero-sub { font-size: 17px; color: var(--muted); max-width: 640px; margin-bottom: 40px; }
 
-.hero-stats { display: flex; gap: 0; border-top: 1px solid var(--border); padding-top: 26px; }
-.hero-stat { padding-right: 40px; margin-right: 40px; border-right: 1px solid var(--border); }
+.hero-stats {
+  display: flex; gap: 0; margin-top: 12px;
+  background: var(--cream-2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px 0;
+}
+.hero-stat {
+  flex: 1; text-align: center; padding: 0 18px;
+  border-right: 1px solid var(--border);
+}
 .hero-stat:last-child { border-right: none; }
-.hero-stat .num { font-family: var(--serif); font-size: 40px; font-weight: 400; letter-spacing: -1px; line-height: 1; }
+.hero-stat .num { font-family: var(--serif); font-size: 38px; font-weight: 400; letter-spacing: -1px; line-height: 1; }
 .hero-stat .lbl { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 8px; text-transform: lowercase; }
 
 /* ---------- Cards / grid ---------- */
