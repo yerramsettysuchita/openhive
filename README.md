@@ -23,6 +23,8 @@
 
 **[Live Backend](https://openhive-backend.onrender.com/health) · [Live Dashboard](https://openhive-omega.vercel.app) · [Install in 5 minutes](#install-openhive-on-your-repo) · [How it works](#how-it-works) · [See it in action](#see-it-in-action)**
 
+**The biggest projects in software are maintained by one unpaid person. OpenHive is a swarm of five AI agents that triages issues, reviews pull requests, patches CVEs, writes docs, and tracks repository health for them, dropped into any repo with one file. [See it run on a brand-new repository.](#verified-live-on-a-fresh-repository)**
+
 </div>
 
 <br>
@@ -32,6 +34,18 @@
 > Every framework you ship on and every library in your lockfile is, very often, maintained by a single human answering issues at midnight between a day job and sleep. They do the work of ten people with the tools of none. When they burn out, the project stalls, and everything built on top of it quietly inherits the risk.
 >
 > OpenHive exists to give that person a team. Not another assistant that helps contributors write more code for the maintainer to review, but a swarm that does the maintainer's own work, triage, review, security, docs, and health, transparently, and where the work already lives.
+
+<br>
+
+## Verified live on a fresh repository
+
+This is the part you can check yourself in two minutes. On June 7 2026 OpenHive was installed on a brand new repository, openhive-install-test, that had never been touched by this project, following the exact five-step guide below. Within 90 seconds of the first issue the Triage Agent posted a human classification with three specific clarifying questions. Within 120 seconds of the first pull request the PR Review Agent caught a false coverage claim and a real logic bug. Within 120 seconds of a vulnerable requirements.txt the Security Agent queried OSV, found 14 CVEs across two packages, and opened a patch pull request upgrading both. Click any one and verify it independently:
+
+| Agent | Live artifact |
+|---|---|
+| Triage | https://github.com/yerramsettysuchita/openhive-install-test/issues/1 |
+| PR Review | https://github.com/yerramsettysuchita/openhive-install-test/pull/2 |
+| Security | https://github.com/yerramsettysuchita/openhive-install-test/pull/3 |
 
 <br>
 
@@ -200,16 +214,6 @@ Every example below is a real output from a live OpenHive deployment on a test r
 **Transparent Disagreement Protocol** firing live on a real event with five cross-agent verdicts:
 
 > The swarm is not fully aligned on this one. The PR Review Agent is highly confident this pull request needs changes before merging, while the Health Agent sees the repository as already slowing and is more cautious about blocking contributions. A look at the specific test coverage gaps the PR Review Agent flagged would help resolve this. The diff shows real functionality being added and that matters for a slowing project, but shipping without tests creates a different kind of debt.
-
-### Verified on a fresh repository
-
-On June 7 2026 OpenHive was installed on a brand new repository named openhive-install-test that had never been touched by this project. The installation followed the exact five-step guide in this README. Within 90 seconds of opening the first issue the Triage Agent posted a human-feeling classification with three specific clarifying questions. Within 120 seconds of opening the first pull request the PR Review Agent caught a false coverage claim and a real logic bug in the diff. Within 120 seconds of pushing a requirements.txt with outdated packages the Security Agent queried the OSV database, found 14 CVEs across two packages, called Claude for a remediation plan, and opened a patch pull request upgrading both packages to their current safe versions. The three agent URLs are linked below.
-
-Triage Agent response on issue 1: https://github.com/yerramsettysuchita/openhive-install-test/issues/1
-
-PR Review Agent response on PR 2: https://github.com/yerramsettysuchita/openhive-install-test/pull/2
-
-Security Agent patch PR on PR 3: https://github.com/yerramsettysuchita/openhive-install-test/pull/3
 
 <br>
 
