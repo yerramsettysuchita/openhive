@@ -52,21 +52,31 @@ def enrich_with_cross_agent_verdicts(
     If Supabase is unavailable, returns the original list unchanged.
     """
     try:
+        # Fetch a wider window, then keep up to 4 REAL opinion agents (skip the
+        # derived consensus/digest rows so the swarm view names actual agents).
         rows = get_recent_repo_verdicts(
-            repo_full_name, hours_back=48, exclude_agent=current_agent, limit=4
+            repo_full_name, hours_back=48, exclude_agent=current_agent, limit=20
         )
     except Exception as exc:  # noqa: BLE001
         print(f"[CONSENSUS] cross-agent enrichment unavailable: {exc}")
         return verdicts
 
     enriched = list(verdicts)
+    seen_agents = set()
     for r in rows:
+        agent = r.get("agent_name", "")
+        if agent in ("consensus", "digest"):
+            continue
+        # One verdict per agent (the most recent) keeps the picture clean.
+        if agent in seen_agents:
+            continue
+        seen_agents.add(agent)
         conf = r.get("confidence")
         if conf is None:
             conf = 0.5
         enriched.append(
             AgentVerdict(
-                agent_name=r.get("agent_name", ""),
+                agent_name=agent,
                 finding_id=r.get("finding_id", ""),
                 classification=r.get("classification"),
                 confidence=float(conf),
@@ -74,6 +84,8 @@ def enrich_with_cross_agent_verdicts(
                 timestamp=str(r.get("created_at", "")),
             )
         )
+        if len(seen_agents) >= 4:
+            break
     return enriched
 
 
@@ -161,6 +173,65 @@ def format_disagreement_comment(result: dict) -> str:
 
     comment = " ".join([s1, s2, s3, s4])
     return comment.replace("—", ", ").replace("–", ", ")
+
+
+AGENT_LABELS = {
+    "triage": "Triage",
+    "pr_review": "PR Review",
+    "security": "Security",
+    "docs": "Docs",
+    "health": "Health",
+    "consensus": "Consensus",
+}
+
+
+def disagreement_note_for(
+    agent_name: str,
+    repo_full_name: str,
+    classification: Optional[str],
+    confidence,
+) -> str:
+    """Return a short, human note to append to an agent's GitHub comment IF the
+    current verdict diverges from the swarm's recent memory of this repo, else
+    an empty string. Pure Python, no Claude calls.
+
+    This is what makes the Transparent Disagreement Protocol visible to anyone
+    reading an OpenHive comment, not just people who read the logs.
+    """
+    try:
+        current = AgentVerdict(
+            agent_name=agent_name,
+            finding_id=f"{agent_name}-pending",
+            classification=classification,
+            confidence=float(confidence) if confidence is not None else 0.0,
+            raw_response={},
+            timestamp="",
+        )
+        enriched = enrich_with_cross_agent_verdicts(agent_name, repo_full_name, [current])
+    except Exception:  # noqa: BLE001
+        return ""
+
+    if len(enriched) < 2:
+        return ""
+
+    result = evaluate_consensus(enriched)
+    if not result.get("disagreement_detected"):
+        return ""
+
+    # Name the agent whose confidence diverges MOST from this agent's view.
+    cur_conf = float(confidence) if confidence is not None else 0.0
+    others = [v for v in enriched if v.agent_name != agent_name]
+    if not others:
+        return ""
+    other_v = max(others, key=lambda v: abs(v.confidence - cur_conf))
+    other = AGENT_LABELS.get(other_v.agent_name, "another")
+
+    note = (
+        "\n\nOne note before you act: the swarm is not fully aligned on this one. "
+        f"The {other} Agent reads this repository differently than I do, so it is "
+        "worth weighing both perspectives before deciding."
+    )
+    return note.replace("—", ", ").replace("–", ", ")
 
 
 def log_disagreement(disagreement: dict, repo_full_name: str) -> bool:

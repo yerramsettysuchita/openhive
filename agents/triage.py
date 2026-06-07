@@ -23,6 +23,7 @@ from anthropic import Anthropic
 from github import Github
 
 from backend.persistence import save_verdict, verdict_exists
+from consensus.protocol import disagreement_note_for
 from memory.chroma_store import write_finding
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -203,6 +204,7 @@ def triage_node(state: dict) -> dict:
     errors = list(state.get("errors", []))
     try:
         comment = _build_comment(classification, questions)
+        comment += disagreement_note_for("triage", repo_full_name, classification, parsed.get("confidence"))
         repo = _github().get_repo(repo_full_name)
         gh_issue = repo.get_issue(number=number)
         gh_issue.create_comment(comment)

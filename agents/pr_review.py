@@ -29,6 +29,7 @@ from anthropic import Anthropic
 from github import Github
 
 from backend.persistence import save_verdict
+from consensus.protocol import disagreement_note_for
 from memory.chroma_store import write_finding, read_cross_agent
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -251,6 +252,7 @@ def pr_review_node(state: dict) -> dict:
     errors = list(state.get("errors", []))
     try:
         comment = _build_comment(parsed, cross_note)
+        comment += disagreement_note_for("pr_review", repo_full_name, verdict, parsed.get("confidence"))
         repo = _github().get_repo(repo_full_name)
         gh_pr = repo.get_pull(number)
         gh_pr.create_issue_comment(comment)

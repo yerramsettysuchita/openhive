@@ -27,11 +27,19 @@
 
 <br>
 
+> **Open source runs the world. One unpaid person usually runs each piece of it.**
+>
+> Every framework you ship on and every library in your lockfile is, very often, maintained by a single human answering issues at midnight between a day job and sleep. They do the work of ten people with the tools of none. When they burn out, the project stalls, and everything built on top of it quietly inherits the risk.
+>
+> OpenHive exists to give that person a team. Not another assistant that helps contributors write more code for the maintainer to review, but a swarm that does the maintainer's own work, triage, review, security, docs, and health, transparently, and where the work already lives.
+
+<br>
+
 ## The problem nobody is solving
 
 There are over 28 million public repositories on GitHub. The median active open source project has one maintainer. That one person is triaging issues, reviewing pull requests, hunting vulnerabilities, writing documentation, and tracking project health simultaneously, unpaid, and invisible to the users who depend on their work.
 
-Every tool that exists today was built for the wrong person. Dependabot, label bots, GitHub Copilot they help contributors write code. Nothing was built to give the maintainer a team.
+Every tool that exists today was built for the wrong person. Dependabot, label bots, GitHub Copilot, they all help contributors write code. None of them was built to give the maintainer a team.
 
 That is the gap OpenHive closes. It treats the maintainer as the primary user and wraps an intelligent engineering team around them, installed as a single GitHub Action, living where the work already lives.
 
@@ -66,6 +74,12 @@ Every finding from every agent flows into a ChromaDB memory layer, namespaced pe
 ### Transparent Disagreement Protocol: It argues in the open
 
 When two agents reach different conclusions about the same repository, and the confidence delta between their positions exceeds 0.3, the disagreement is not hidden or averaged away. It is logged, named, and surfaced to the maintainer with both positions stated clearly in plain English. The maintainer makes the call with full information.
+
+And it shows up where maintainers actually look. When the swarm is split, the agent's own GitHub comment ends with a plain note:
+
+> One note before you act: the swarm is not fully aligned on this one. The Health Agent reads this repository differently than I do, so it is worth weighing both perspectives before deciding.
+
+No other agent system in production surfaces its own internal conflict to the user.
 
 This fires on real events. Every event is evaluated against the swarm's recent memory of the repository. In a live test, a single issue produced five cross-agent verdicts and surfaced a genuine disagreement between the PR Review Agent and the Health Agent, logged and persisted, not swept under a rug. No other agent system in production surfaces its own internal conflict to the user today.
 
