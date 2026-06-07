@@ -110,6 +110,7 @@ export default function Home() {
   const [status, setStatus] = useState("checking");
   const [data, setData] = useState(makeFallback());
   const [progress, setProgress] = useState(0);
+  const [coldSeconds, setColdSeconds] = useState(0);
 
   async function analyse(targetRepo, allowFallback) {
     const t = (targetRepo || "").trim();
@@ -152,6 +153,18 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Cold-start banner: while the backend is waking, count up and keep polling
+  // /health until it responds, then hide the banner.
+  useEffect(() => {
+    if (status === "live") { setColdSeconds(0); return; }
+    if (status === "checking") return;
+    const tick = setInterval(() => setColdSeconds((s) => s + 1), 1000);
+    const poll = setInterval(() => {
+      getJSON("/health").then(() => setStatus("live")).catch(() => {});
+    }, 5000);
+    return () => { clearInterval(tick); clearInterval(poll); };
+  }, [status]);
+
   const d = data;
   const lbl = LABEL[d.health.label] || LABEL.unknown;
   const perAgent = d.stats.perAgent || {};
@@ -176,6 +189,13 @@ export default function Home() {
           <a className="btn btn-primary" href={`${BACKEND}/docs`} target="_blank" rel="noreferrer">API docs</a>
         </div>
       </header>
+
+      {status === "waking" && (
+        <div style={{ background: "#FFFBF0", borderBottom: "1px solid rgba(212,124,15,0.2)", padding: "10px 32px", fontSize: 12, color: "#D47C0F", fontFamily: "'Lora', serif", textAlign: "center" }}>
+          The backend is waking from sleep. First response may take up to 60 seconds on the free tier. This is normal.
+          <span style={{ fontWeight: 600, marginLeft: 8 }}>{coldSeconds}s</span>
+        </div>
+      )}
 
       <section className="container hero">
         <span className="badge"><span className="pulse live" /> Live production deployment</span>

@@ -217,7 +217,7 @@ def health_node(state: dict) -> dict:
     p1 = f"This repository is currently scoring {score} out of 100, which puts it in the {label} range."
     p2 = f"{key_insight} It is the signal most worth keeping an eye on as the project moves forward."
     p3 = f"{action} You are carrying a lot here, and steady attention to this one thing will go a long way."
-    body = "\n\n".join([p1, p2, p3]).replace("—", ", ").replace("–", ", ")
+    body = "\n\n".join([p1, p2, p3]).replace("—", ", ").replace("–", ", ").replace(" , ", ", ").replace("  ", " ").strip()
 
     errors = list(state.get("errors", []))
     posted = False

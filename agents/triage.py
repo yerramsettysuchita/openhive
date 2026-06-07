@@ -205,6 +205,7 @@ def triage_node(state: dict) -> dict:
     try:
         comment = _build_comment(classification, questions)
         comment += disagreement_note_for("triage", repo_full_name, classification, parsed.get("confidence"))
+        comment = comment.replace(" , ", ", ").replace("  ", " ").strip()
         repo = _github().get_repo(repo_full_name)
         gh_issue = repo.get_issue(number=number)
         gh_issue.create_comment(comment)

@@ -25,6 +25,7 @@ from anthropic import Anthropic
 from github import Github
 
 from backend.persistence import save_verdict
+from backend.gh_files import changed_files
 from memory.chroma_store import write_finding
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -86,17 +87,8 @@ def _qualifies(path: str) -> bool:
 
 
 def _changed_doc_files(payload: dict) -> list[str]:
-    files: set[str] = set()
-    commits = list(payload.get("commits", []))
-    head = payload.get("head_commit")
-    if head:
-        commits.append(head)
-    for c in commits:
-        for key in ("added", "modified"):
-            for f in c.get(key, []) or []:
-                if _qualifies(f):
-                    files.add(f)
-    return sorted(files)
+    # Shared three-tier detector (commits -> head_commit -> compare API).
+    return sorted(f for f in changed_files(payload) if _qualifies(f))
 
 
 def docs_node(state: dict) -> dict:
@@ -186,7 +178,7 @@ def docs_node(state: dict) -> dict:
                 "none": "A small documentation note here would help future readers.",
             }
             follow = action_phrases.get(suggested_action, action_phrases["none"])
-            body = f"{gap} {follow}".replace("—", ", ").replace("–", ", ")
+            body = f"{gap} {follow}".replace("—", ", ").replace("–", ", ").replace(" , ", ", ").replace("  ", " ").strip()
             commit = repo.get_commit(sha)
             commit.create_comment(body)
             print(f"[OPENHIVE] Docs commit comment posted on {sha8}")

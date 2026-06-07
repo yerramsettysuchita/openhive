@@ -201,6 +201,16 @@ Every example below is a real output from a live OpenHive deployment on a test r
 
 > The swarm is not fully aligned on this one. The PR Review Agent is highly confident this pull request needs changes before merging, while the Health Agent sees the repository as already slowing and is more cautious about blocking contributions. A look at the specific test coverage gaps the PR Review Agent flagged would help resolve this. The diff shows real functionality being added and that matters for a slowing project, but shipping without tests creates a different kind of debt.
 
+### Verified on a fresh repository
+
+On June 7 2026 OpenHive was installed on a brand new repository named openhive-install-test that had never been touched by this project. The installation followed the exact five-step guide in this README. Within 90 seconds of opening the first issue the Triage Agent posted a human-feeling classification with three specific clarifying questions. Within 120 seconds of opening the first pull request the PR Review Agent caught a false coverage claim and a real logic bug in the diff. Within 120 seconds of pushing a requirements.txt with outdated packages the Security Agent queried the OSV database, found 14 CVEs across two packages, called Claude for a remediation plan, and opened a patch pull request upgrading both packages to their current safe versions. The three agent URLs are linked below.
+
+Triage Agent response on issue 1: https://github.com/yerramsettysuchita/openhive-install-test/issues/1
+
+PR Review Agent response on PR 2: https://github.com/yerramsettysuchita/openhive-install-test/pull/2
+
+Security Agent patch PR on PR 3: https://github.com/yerramsettysuchita/openhive-install-test/pull/3
+
 <br>
 
 ## Token discipline

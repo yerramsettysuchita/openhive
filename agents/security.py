@@ -31,6 +31,7 @@ from anthropic import Anthropic
 from github import Github
 
 from backend.persistence import save_verdict
+from backend.gh_files import changed_files
 from memory.chroma_store import write_finding
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
@@ -103,17 +104,9 @@ def _parse_json(raw: str) -> dict:
 
 
 def _changed_dep_files(payload: dict) -> list[str]:
-    files: set[str] = set()
-    commits = list(payload.get("commits", []))
-    head = payload.get("head_commit")
-    if head:
-        commits.append(head)
-    for c in commits:
-        for key in ("added", "modified"):
-            for f in c.get(key, []) or []:
-                if os.path.basename(f) in QUALIFYING_FILES:
-                    files.add(f)
-    return sorted(files)
+    # Uses the shared three-tier detector (commits -> head_commit -> compare API)
+    # so it works for raw webhooks and GitHub Action toJSON(github.event) pushes.
+    return sorted(f for f in changed_files(payload) if os.path.basename(f) in QUALIFYING_FILES)
 
 
 def _parse_requirements(content: str) -> list[tuple[str, str]]:
@@ -328,7 +321,7 @@ def security_node(state: dict) -> dict:
 
         n_pkgs = len({s.get("package_name") for s in upgrades if s.get("package_name")}) or len(steps)
         title = f"OpenHive Security Patch - {n_pkgs} packages ({severity})"
-        pr_description = pr_description.replace("—", ", ").replace("–", ", ")
+        pr_description = pr_description.replace("—", ", ").replace("–", ", ").replace(" , ", ", ").replace("  ", " ").strip()
         pr = repo.create_pull(title=title, body=pr_description, head=branch, base=default_branch)
         print(f"[OPENHIVE] Patch PR opened: {pr.html_url} ({changed_count} line(s) changed)")
 

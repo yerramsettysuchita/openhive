@@ -253,6 +253,7 @@ def pr_review_node(state: dict) -> dict:
     try:
         comment = _build_comment(parsed, cross_note)
         comment += disagreement_note_for("pr_review", repo_full_name, verdict, parsed.get("confidence"))
+        comment = comment.replace(" , ", ", ").replace("  ", " ").strip()
         repo = _github().get_repo(repo_full_name)
         gh_pr = repo.get_pull(number)
         gh_pr.create_issue_comment(comment)

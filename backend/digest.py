@@ -116,7 +116,7 @@ def generate_digest_post(data: dict) -> str:
         f"output={message.usage.output_tokens}"
     )
     text = message.content[0].text.strip()
-    return text.replace("—", ", ").replace("–", ", ")
+    return text.replace("—", ", ").replace("–", ", ").replace(" , ", ", ").replace("  ", " ").strip()
 
 
 def _post_discussion(repo_full_name: str, title: str, body: str, token: str) -> str:

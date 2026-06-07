@@ -70,18 +70,7 @@ DEP_FILES = {
 DOCS_EXTS = (".py", ".js", ".ts", ".md")
 
 
-def _changed_files(payload: dict) -> set[str]:
-    """Collect every file path touched by a push payload."""
-    files: set[str] = set()
-    commits = list(payload.get("commits", []))
-    head = payload.get("head_commit")
-    if head:
-        commits.append(head)
-    for c in commits:
-        for key in ("added", "modified", "removed"):
-            for f in c.get(key, []) or []:
-                files.add(f)
-    return files
+from backend.gh_files import changed_files as _changed_files
 
 
 def touches_dependency_files(payload: dict) -> bool:
