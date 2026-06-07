@@ -1,0 +1,12 @@
+-- OpenHive — Supabase schema
+-- Phase 1 placeholder. Full schema lands in Phase 4 (persistence layer).
+--
+-- Design rule (NFR): every agent verdict is written here BEFORE any GitHub
+-- API write is attempted, so no action is taken that cannot be audited.
+--
+-- Planned tables (defined in a later phase):
+--   verdicts       — one row per agent decision (agent, event, confidence, action)
+--   disagreements  — logged conflicts where two agents' confidence delta > 0.3
+--   digests        — daily digest posts and their ranked findings
+--
+-- Intentionally empty of DDL in Phase 1 to avoid shipping an unused schema.

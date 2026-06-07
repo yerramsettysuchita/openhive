@@ -1,0 +1,10 @@
+# Normalize line endings: store everything as LF in the repo so the project
+# stays clean across Windows/macOS/Linux (OpenHive ships to maintainers on all
+# platforms). Silences the "LF will be replaced by CRLF" warnings on Windows.
+* text=auto eol=lf
+
+# Binary types Git should never touch.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.ico binary

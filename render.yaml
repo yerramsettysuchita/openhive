@@ -1,0 +1,35 @@
+# Render deployment config for the OpenHive backend.
+# Deploy via the Render dashboard (New > Web Service) or as a Blueprint.
+# Secrets (sync: false) must be entered manually in the Render dashboard.
+
+services:
+  - type: web
+    name: openhive-backend
+    runtime: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      # Pin the Python version we built and tested against (avoids wheel issues).
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      # Non-secret configuration.
+      - key: GITHUB_MODELS_ENDPOINT
+        value: https://models.github.ai/inference
+      - key: APP_ENV
+        value: production
+      # Secrets — enter these in the Render dashboard.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_TOKEN_REPO
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

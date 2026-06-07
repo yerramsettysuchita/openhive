@@ -1,0 +1,65 @@
+# OpenHive — drop-in GitHub Action for MAINTAINERS.
+#
+# WHAT THIS DOES
+#   OpenHive is a swarm of AI agents that triage your issues, review your pull
+#   requests, hunt vulnerabilities in your dependencies, watch your docs, track
+#   your repo's health, and post a plain-English daily digest. This one file
+#   forwards your repository's events to the OpenHive backend, which does the
+#   thinking and posts results back to your repo.
+#
+# SETUP (under 5 minutes) — add two repository secrets first:
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#     OPENHIVE_BACKEND_URL    The OpenHive backend address, e.g.
+#                             https://openhive-backend.onrender.com
+#     OPENHIVE_WEBHOOK_SECRET A shared secret that signs each payload so the
+#                             backend can trust it came from your repo. Use the
+#                             value provided when you connected your repo to
+#                             OpenHive (or any long random string, set the same
+#                             value on the backend).
+#
+# Then copy this file to .github/workflows/openhive.yml and push. Done.
+
+name: OpenHive
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  issues:
+    types: [opened, edited]
+  schedule:
+    # Daily digest at 08:00 UTC.
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  openhive-swarm:
+    runs-on: ubuntu-latest
+    steps:
+      # Real-time events (push / pull_request / issues): forward the signed
+      # event payload to the OpenHive backend's /webhook endpoint.
+      - name: Notify OpenHive (event)
+        if: ${{ github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}
+        env:
+          # Passed via env (not inlined) to avoid any shell-injection from
+          # untrusted event content.
+          PAYLOAD: ${{ toJSON(github.event) }}
+          BACKEND: ${{ secrets.OPENHIVE_BACKEND_URL }}
+          SECRET: ${{ secrets.OPENHIVE_WEBHOOK_SECRET }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          SIG="sha256=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')"
+          curl --max-time 120 -sS -X POST "$BACKEND/webhook" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: $EVENT" \
+            -H "X-Hub-Signature-256: $SIG" \
+            --data-binary "$PAYLOAD"
+
+      # Scheduled or manual runs: ask the backend to generate the daily digest.
+      - name: Notify OpenHive (digest)
+        if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+        env:
+          BACKEND: ${{ secrets.OPENHIVE_BACKEND_URL }}
+        run: |
+          curl --max-time 120 -sS -X POST "$BACKEND/digest?repo=${{ github.repository }}"

@@ -1,0 +1,8 @@
+.env
+venv/
+__pycache__/
+*.pem
+*.pyc
+.DS_Store
+chroma_db/
+*.log
