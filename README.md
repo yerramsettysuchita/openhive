@@ -15,8 +15,13 @@
 [![Claude Sonnet](https://img.shields.io/badge/Claude-Sonnet%204.6-D97757.svg)](https://www.anthropic.com/)
 [![GitHub Models](https://img.shields.io/badge/GitHub%20Models-observability-181717?logo=github&logoColor=white)](https://github.com/marketplace/models)
 [![Deploy: Render](https://img.shields.io/badge/Backend-Render-46E3B7.svg)](https://render.com/)
+[![Dashboard: Vercel](https://img.shields.io/badge/Dashboard-Vercel-000000?logo=vercel&logoColor=white)](https://openhive-omega.vercel.app)
 
-**[Live Backend](https://openhive-backend.onrender.com/health) · [Install in 5 minutes](#install-openhive-on-your-repo) · [How it works](#how-it-works) · [See it in action](#see-it-in-action)**
+**Live backend:** https://openhive-backend.onrender.com  
+**Frontend dashboard:** https://openhive-omega.vercel.app  
+**Test repository:** https://github.com/yerramsettysuchita/openhive-test  
+
+**[Live Backend](https://openhive-backend.onrender.com/health) · [Live Dashboard](https://openhive-omega.vercel.app) · [Install in 5 minutes](#install-openhive-on-your-repo) · [How it works](#how-it-works) · [See it in action](#see-it-in-action)**
 
 </div>
 
