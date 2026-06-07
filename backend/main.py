@@ -89,3 +89,22 @@ def stats():
         "per_agent": per_agent,
         "most_recent": most_recent,
     }
+
+
+@app.get("/swarm/status")
+def swarm_status(repo: str):
+    """Most recent verdict per agent for a repo, powering the live swarm strip."""
+    rows = get_verdicts_for_repo(repo, limit=100)
+    status = {}
+    for agent in ["triage", "pr_review", "security", "docs", "health"]:
+        av = [v for v in rows if v.get("agent_name") == agent]
+        if av:
+            latest = max(av, key=lambda x: x.get("created_at", ""))
+            status[agent] = {
+                "last_seen": latest.get("created_at"),
+                "classification": latest.get("classification", "unknown"),
+                "active": True,
+            }
+        else:
+            status[agent] = {"last_seen": None, "classification": None, "active": False}
+    return status

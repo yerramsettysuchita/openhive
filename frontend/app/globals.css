@@ -178,6 +178,56 @@ h1.hero-title em { font-style: italic; font-weight: 300; color: var(--muted); }
 
 .skeleton { color: var(--muted-2); }
 
+/* Repo switcher */
+.repo-row { display: flex; gap: 10px; margin: 26px 0 8px; max-width: 560px; }
+.repo-input {
+  flex: 1; font-family: var(--sans); font-size: 14px; color: var(--ink);
+  background: var(--cream-2); border: 1px solid var(--border-strong);
+  border-radius: 10px; padding: 0 14px; height: 42px; outline: none;
+}
+.repo-input:focus { border-color: var(--ink); }
+.repo-btn { height: 42px; padding: 0 18px; white-space: nowrap; }
+.repo-empty {
+  background: var(--amber-bg); border: 1px solid #f0dca0; color: #7a560a;
+  border-radius: 12px; padding: 16px 18px; font-size: 14px; margin-bottom: 22px;
+}
+.repo-empty a { color: var(--teal); font-weight: 600; }
+
+/* Swarm status strip */
+.swarm-strip {
+  background: var(--cream-2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 16px 8px; margin-bottom: 22px; display: flex; align-items: center;
+}
+.swarm-label {
+  font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 1px; padding: 0 18px; white-space: nowrap;
+}
+.swarm-items { display: flex; flex: 1; }
+.swarm-item {
+  flex: 1; display: flex; flex-direction: column; gap: 3px;
+  padding: 2px 18px; border-left: 1px solid var(--border);
+}
+.swarm-item .top { display: flex; align-items: center; gap: 8px; }
+.swarm-dot { width: 8px; height: 8px; border-radius: 50%; }
+.swarm-dot.on { background: var(--green); box-shadow: 0 0 6px rgba(46,125,50,.5); }
+.swarm-dot.off { background: var(--muted-2); }
+.swarm-name { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.swarm-time { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+/* Clickable feed items */
+a.feed-link { display: block; text-decoration: none; color: inherit; border-radius: 8px; transition: background .15s ease; }
+a.feed-link:hover { background: var(--cream); }
+.feed-item { padding-left: 8px; padding-right: 8px; }
+.feed-row3 { display: grid; grid-template-columns: 120px 1fr 90px 16px; gap: 14px; align-items: start; }
+.chevron { color: var(--muted-2); font-family: var(--mono); align-self: center; transition: transform .15s ease; }
+a.feed-link:hover .chevron { transform: translateX(2px); color: var(--ink); }
+
+@media (max-width: 760px) {
+  .swarm-strip { flex-direction: column; align-items: stretch; gap: 10px; }
+  .swarm-items { flex-wrap: wrap; }
+  .swarm-item { flex: 1 1 33%; border-left: none; border-top: 1px solid var(--border); padding-top: 8px; }
+}
+
 @media (max-width: 860px) {
   .grid-2 { grid-template-columns: 1fr; }
   h1.hero-title { font-size: 38px; letter-spacing: -1px; }
