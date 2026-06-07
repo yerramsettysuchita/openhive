@@ -1,8 +1,8 @@
-"""OpenHive FastAPI entrypoint (Phase 1: the nervous system).
+"""OpenHive FastAPI entrypoint.
 
-Loads environment, mounts the webhook router, and exposes a health probe.
-No agents, no LangGraph yet — just a server that receives a GitHub event,
-makes one traced Claude call, and returns 200.
+Loads environment, mounts the webhook router, exposes the health probe, the
+daily-digest trigger, and three read-only endpoints the frontend dashboard
+calls (verdicts, health score, stats). The read endpoints make no Claude calls.
 """
 
 import os
@@ -12,10 +12,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI  # noqa: E402  (import after load_dotenv by design)
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 from backend.webhook_router import router  # noqa: E402
+from backend.persistence import (  # noqa: E402
+    get_verdicts_for_repo,
+    get_recent_verdicts,
+)
 
-app = FastAPI(title="OpenHive", version="0.1.0")
+app = FastAPI(title="OpenHive", version="1.0.0")
+
+# Allow the Vercel dashboard (and local dev) to call the read endpoints.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://openhive-omega.vercel.app",
+        "http://localhost:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 app.include_router(router)
 
 
@@ -32,3 +50,42 @@ async def trigger_digest(repo: str):
 
     url = await run_digest(repo)
     return {"status": "digest posted", "url": url}
+
+
+# --- Read-only dashboard endpoints (no Claude calls, no side effects) ---
+
+@app.get("/verdicts")
+def verdicts(repo: str | None = None, limit: int = 20):
+    """Recent agent verdicts, optionally scoped to one repo."""
+    if repo:
+        return get_verdicts_for_repo(repo, limit=limit)
+    return get_recent_verdicts(limit=limit, hours_back=24 * 365)
+
+
+@app.get("/health/score")
+def health_score(repo: str):
+    """Most recent Health Agent score/label for a repo."""
+    rows = get_verdicts_for_repo(repo, agent_name="health", limit=1)
+    if not rows:
+        return {"score": 0, "label": "unknown"}
+    raw = rows[0].get("raw_response") or {}
+    return {
+        "score": raw.get("health_score", 0),
+        "label": raw.get("health_label", "unknown"),
+    }
+
+
+@app.get("/stats")
+def stats():
+    """Aggregate verdict counts for the live activity feed."""
+    rows = get_recent_verdicts(limit=500, hours_back=24 * 365)
+    per_agent: dict[str, int] = {}
+    for r in rows:
+        a = r.get("agent_name", "unknown")
+        per_agent[a] = per_agent.get(a, 0) + 1
+    most_recent = rows[0].get("created_at") if rows else None
+    return {
+        "total_verdicts": len(rows),
+        "per_agent": per_agent,
+        "most_recent": most_recent,
+    }

@@ -5,7 +5,10 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+const BACKEND =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  "";
 
 const AGENTS = ["triage", "pr_review", "security", "docs", "health"];
 
@@ -38,7 +41,12 @@ function timeAgo(iso) {
 export default function Home() {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
+  // Live backend status from the Render API: "checking" | "live" | "sleeping".
+  const [backendStatus, setBackendStatus] = useState("checking");
+  const [apiStats, setApiStats] = useState(null);
 
+  // Rich data (instant) from Supabase — keeps the UI populated even if the
+  // Render free tier is cold-starting.
   useEffect(() => {
     if (!SUPABASE_URL || !SUPABASE_KEY) {
       setError("missing-env");
@@ -56,10 +64,26 @@ export default function Home() {
       });
   }, []);
 
+  // Live call to the production backend /stats endpoint (proves the dashboard
+  // is wired to the real Render API, not static content).
+  useEffect(() => {
+    if (!BACKEND) {
+      setBackendStatus("sleeping");
+      return;
+    }
+    fetch(`${BACKEND}/stats`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data) => {
+        setApiStats(data);
+        setBackendStatus("live");
+      })
+      .catch(() => setBackendStatus("sleeping"));
+  }, []);
+
   if (error === "missing-env") {
     return (
       <div className="wrap">
-        <Header live={false} />
+        <Header status="sleeping" />
         <div className="notice">
           Set <code>NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
           <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in your Vercel environment
@@ -72,7 +96,7 @@ export default function Home() {
   if (error) {
     return (
       <div className="wrap">
-        <Header live={false} />
+        <Header status={backendStatus} />
         <div className="notice">Could not load data: {error}</div>
       </div>
     );
@@ -81,7 +105,7 @@ export default function Home() {
   if (rows === null) {
     return (
       <div className="wrap">
-        <Header live={false} />
+        <Header status={backendStatus} />
         <div className="spin">Loading the swarm…</div>
       </div>
     );
@@ -97,11 +121,17 @@ export default function Home() {
     (r) => r.agent_name === "consensus" && r.classification === "disagreement"
   );
   const digests = rows.filter((r) => r.agent_name === "digest");
-  const activeAgents = new Set(agentRows.map((r) => r.agent_name)).size;
+
+  // Prefer the live /stats figures; fall back to Supabase-derived counts.
+  const perAgent = apiStats?.per_agent || {};
+  const totalFindings = apiStats?.total_verdicts ?? rows.length;
+  const activeAgents = apiStats
+    ? AGENTS.filter((a) => perAgent[a]).length
+    : new Set(agentRows.map((r) => r.agent_name)).size;
 
   return (
     <div className="wrap">
-      <Header live={true} />
+      <Header status={backendStatus} />
 
       <div className="hero">
         <div className="score-card">
@@ -129,7 +159,7 @@ export default function Home() {
       </div>
 
       <div className="stats">
-        <Stat n={rows.length} l="Total findings" />
+        <Stat n={totalFindings} l="Total findings (live API)" />
         <Stat n={`${activeAgents}/5`} l="Agents active" />
         <Stat n={disagreements.length} l="Disagreements surfaced" />
         <Stat n={digests.length} l="Daily digests" />
@@ -185,14 +215,14 @@ export default function Home() {
         The interface is the digest — one plain-language morning note, ranked by
         what matters.
       </div>
-      {digests.length === 0 && (
-        <div className="empty">No digests posted yet.</div>
-      )}
+      {digests.length === 0 && <div className="empty">No digests posted yet.</div>}
       {digests.map((r) => (
         <div className="digest-card" key={r.id}>
           <div className="meta">
             <span>{new Date(r.created_at).toLocaleString()}</span>
-            {r.github_action_url && <a href={r.github_action_url} target="_blank" rel="noreferrer">view on GitHub →</a>}
+            {r.github_action_url && (
+              <a href={r.github_action_url} target="_blank" rel="noreferrer">view on GitHub →</a>
+            )}
           </div>
           <div className="body">{r.raw_response?.digest || "(digest text unavailable)"}</div>
         </div>
@@ -205,7 +235,13 @@ export default function Home() {
   );
 }
 
-function Header({ live }) {
+function Header({ status }) {
+  const map = {
+    checking: { cls: "off", text: "Connecting to backend…" },
+    live: { cls: "live", text: "Backend live" },
+    sleeping: { cls: "off", text: "Backend waking (free tier)" },
+  };
+  const s = map[status] || map.checking;
   return (
     <div className="nav">
       <div className="brand">
@@ -217,10 +253,10 @@ function Header({ live }) {
       </div>
       <div className="nav-links">
         <span>
-          <span className={`dot ${live ? "live" : "off"}`} />
-          {live ? "Backend live" : "Connecting"}
+          <span className={`dot ${s.cls}`} />
+          {s.text}
         </span>
-        {BACKEND_URL && <a href={`${BACKEND_URL}/health`} target="_blank" rel="noreferrer">API</a>}
+        {BACKEND && <a href={`${BACKEND}/health`} target="_blank" rel="noreferrer">API</a>}
         <a href="https://github.com/yerramsettysuchita/openhive" target="_blank" rel="noreferrer">GitHub</a>
       </div>
     </div>

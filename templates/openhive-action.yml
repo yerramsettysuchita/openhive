@@ -9,13 +9,16 @@
 #
 # SETUP (under 5 minutes) — add two repository secrets first:
 #   Settings -> Secrets and variables -> Actions -> New repository secret
-#     OPENHIVE_BACKEND_URL    The OpenHive backend address, e.g.
-#                             https://openhive-backend.onrender.com
-#     OPENHIVE_WEBHOOK_SECRET A shared secret that signs each payload so the
-#                             backend can trust it came from your repo. Use the
-#                             value provided when you connected your repo to
-#                             OpenHive (or any long random string, set the same
-#                             value on the backend).
+#
+#     OPENHIVE_BACKEND_URL
+#       The OpenHive backend address. Reference deployment:
+#         https://openhive-backend.onrender.com
+#       (Use your own backend URL if you self-host.)
+#
+#     OPENHIVE_WEBHOOK_SECRET
+#       A shared secret that signs each payload so the backend can trust it came
+#       from your repo. Use the value provided when you connected your repo to
+#       OpenHive (or any long random string, set the same value on the backend).
 #
 # Then copy this file to .github/workflows/openhive.yml and push. Done.
 
@@ -36,17 +39,27 @@ on:
 jobs:
   openhive-swarm:
     runs-on: ubuntu-latest
+    # Don't let a sleeping/unreachable backend hang the workflow.
+    timeout-minutes: 3
     steps:
       # Real-time events (push / pull_request / issues): forward the signed
       # event payload to the OpenHive backend's /webhook endpoint.
+      #
+      # NOTE: the public-repo guard is on THIS step (not the whole job) on
+      # purpose. github.event.repository is empty for scheduled runs, so a
+      # job-level private check would silently disable the daily digest.
       - name: Notify OpenHive (event)
-        if: ${{ github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' }}
+        if: ${{ github.event_name != 'schedule' && github.event_name != 'workflow_dispatch' && github.event.repository.private == false }}
+        # continue-on-error: a cold-starting free-tier backend may time out on
+        # the first call. The backend processes the event when it wakes; we do
+        # not want a red X on the maintainer's repo discouraging adoption.
+        continue-on-error: true
         env:
-          # Passed via env (not inlined) to avoid any shell-injection from
-          # untrusted event content.
+          # Passed via env (not inlined) to avoid shell-injection from untrusted
+          # event content.
           PAYLOAD: ${{ toJSON(github.event) }}
-          BACKEND: ${{ secrets.OPENHIVE_BACKEND_URL }}
-          SECRET: ${{ secrets.OPENHIVE_WEBHOOK_SECRET }}
+          BACKEND: ${{ secrets.OPENHIVE_BACKEND_URL }}     # your OpenHive backend URL
+          SECRET: ${{ secrets.OPENHIVE_WEBHOOK_SECRET }}   # shared signing secret
           EVENT: ${{ github.event_name }}
         run: |
           SIG="sha256=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')"
@@ -59,7 +72,8 @@ jobs:
       # Scheduled or manual runs: ask the backend to generate the daily digest.
       - name: Notify OpenHive (digest)
         if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+        continue-on-error: true
         env:
-          BACKEND: ${{ secrets.OPENHIVE_BACKEND_URL }}
+          BACKEND: ${{ secrets.OPENHIVE_BACKEND_URL }}     # your OpenHive backend URL
         run: |
           curl --max-time 120 -sS -X POST "$BACKEND/digest?repo=${{ github.repository }}"

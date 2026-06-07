@@ -311,6 +311,8 @@ create index if not exists idx_verdicts_created on agent_verdicts(created_at des
 
 The finding_id column carries a unique constraint so duplicate webhook deliveries are rejected at the database level rather than producing duplicate agent actions.
 
+Row level security is currently disabled on the agent_verdicts table because OpenHive uses the anon key for inserts from the backend. This is intentional for single-tenant deployments where one OpenHive instance serves one operator. If you are building a multi-tenant deployment where multiple operators share one Supabase project, enable RLS with a policy that restricts each operator to their own rows using a project-scoped API key. The schema is designed to support this upgrade without any structural changes.
+
 <br>
 
 ## Repository layout
