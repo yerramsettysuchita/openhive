@@ -8,12 +8,14 @@ TOKEN DISCIPLINE: exactly ONE Claude call per digest, capped at 500 tokens.
 """
 
 import os
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
 from anthropic import Anthropic
 
+from backend.metrics import record_claude_call
 from backend.persistence import get_recent_verdicts, save_verdict
 from memory.chroma_store import write_finding
 
@@ -105,12 +107,14 @@ def generate_digest_post(data: dict) -> str:
         for v in data["critical_findings"][:6]:
             lines.append(f"    - {v.get('agent_name')} ({v.get('classification')}): {_verdict_summary(v)}")
 
+    _t0 = time.perf_counter()
     message = _client().messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
         system=DIGEST_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": "\n".join(lines)}],
     )
+    record_claude_call("digest", message.usage.input_tokens, message.usage.output_tokens, (time.perf_counter() - _t0) * 1000)
     print(
         f"[TOKEN USE] digest input={message.usage.input_tokens} "
         f"output={message.usage.output_tokens}"

@@ -16,12 +16,14 @@ only when a real GitHub webhook event triggers this agent in production.
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
 from anthropic import Anthropic
 from github import Github
 
+from backend.metrics import record_claude_call
 from backend.persistence import save_verdict, verdict_exists
 from consensus.protocol import disagreement_note_for
 from memory.chroma_store import write_finding
@@ -153,6 +155,7 @@ def triage_node(state: dict) -> dict:
     print("[OPENHIVE] Triage Agent called")
 
     # Step 2: one Claude call, strict token budget.
+    _t0 = time.perf_counter()
     message = _client().messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
@@ -164,6 +167,7 @@ def triage_node(state: dict) -> dict:
             }
         ],
     )
+    record_claude_call("triage", message.usage.input_tokens, message.usage.output_tokens, (time.perf_counter() - _t0) * 1000)
     print(
         f"[TOKEN USE] triage input={message.usage.input_tokens} "
         f"output={message.usage.output_tokens}"

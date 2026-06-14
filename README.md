@@ -294,6 +294,16 @@ curl -X POST "http://localhost:8000/digest?repo=owner/your-repo-name"
 
 <br>
 
+## Tests
+
+The test suite covers the core routing logic that determines which agent handles each GitHub event. Run the tests with pytest tests from the project root after installing dependencies. All tests run without any external API calls using mocked payloads so they are safe to run in any environment without credentials.
+
+```powershell
+python -m pytest tests/ -v
+```
+
+<br>
+
 ## Environment variables
 
 | Variable | Required | What it does |
@@ -399,6 +409,26 @@ LangGraph isolates state per event so two simultaneous webhook deliveries, say a
 The Security Agent only acts on default branch pushes. Agents never review or triage content that OpenHive itself generated. The Triage Agent carries an explicit guard that checks whether an issue was opened by the same account running OpenHive and skips it silently if so. This prevents the swarm from feeding back on its own daily digest or health reports.
 
 The idempotency guarantee means that if GitHub delivers the same webhook event twice, the second delivery produces a database conflict on finding_id and the agent returns cleanly without duplicating any GitHub comment, label, or PR.
+
+<br>
+
+## Troubleshooting
+
+### Render cold start
+
+The Render free tier spins down after fifteen minutes of inactivity. The first request after an idle period takes between thirty and sixty seconds to respond. Use the health endpoint to wake the service before sending real traffic, and note that the frontend dashboard shows a banner with a live counter while the backend is waking.
+
+### Webhook signature verification failures
+
+The most common cause is a mismatch between the OPENHIVE_WEBHOOK_SECRET value in the Render environment variables and the secret registered in the GitHub webhook settings. Both values must be identical hex strings. Regenerate the webhook secret using the python secrets command, update both locations at the same time, and redeliver the last webhook from the GitHub webhook Recent Deliveries tab to confirm the fix.
+
+### ChromaDB database lock errors
+
+ChromaDB uses a local file lock. Running two uvicorn worker processes pointing at the same chroma_db directory causes a lock conflict that prevents the second process from starting. Always run a single worker in development using the reload flag, which is the default in the startup command, and use a separate chroma_db path for each environment in production.
+
+### Supabase insert failures
+
+The agent_verdicts table has Row Level Security disabled by default because OpenHive uses the anon key for inserts from the backend. Enabling RLS without a corresponding insert policy will silently block all verdict persistence. Either keep RLS disabled for single-tenant deployments, or create an insert policy that allows the service role key before enabling RLS in multi-tenant scenarios.
 
 <br>
 

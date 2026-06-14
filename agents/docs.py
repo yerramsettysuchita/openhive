@@ -18,12 +18,14 @@ TOKEN DISCIPLINE: exactly ONE Claude call per qualifying push, capped at 300.
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
 from anthropic import Anthropic
 from github import Github
 
+from backend.metrics import record_claude_call
 from backend.persistence import save_verdict
 from backend.gh_files import changed_files
 from memory.chroma_store import write_finding
@@ -125,12 +127,14 @@ def docs_node(state: dict) -> dict:
         return {"agent_called": "docs", "errors": list(state.get("errors", [])) + ["docs: no file contents fetched"]}
 
     # Step 3: one Claude call.
+    _t0 = time.perf_counter()
     message = _client().messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
         system=DOCS_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": "\n\n".join(blocks)}],
     )
+    record_claude_call("docs", message.usage.input_tokens, message.usage.output_tokens, (time.perf_counter() - _t0) * 1000)
     print(
         f"[TOKEN USE] docs input={message.usage.input_tokens} "
         f"output={message.usage.output_tokens}"

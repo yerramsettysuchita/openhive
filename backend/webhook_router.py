@@ -14,6 +14,7 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 
 from backend.graph import app as agent_graph
+from backend.metrics import record_webhook
 
 router = APIRouter()
 
@@ -36,6 +37,7 @@ async def receive_webhook(request: Request):
         raise HTTPException(status_code=401, detail="Invalid signature")
 
     event_type = request.headers.get("X-GitHub-Event", "unknown")
+    record_webhook(event_type)
     payload = json.loads(payload_bytes)
     repo_full_name = payload.get("repository", {}).get("full_name", "unknown")
 

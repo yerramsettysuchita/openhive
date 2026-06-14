@@ -1,0 +1,13 @@
+# Changelog
+
+## 1.0.0 (June 7 2026)
+
+Initial production release of OpenHive. This release ships the full swarm of five agents, Triage, PR Review, Security, Docs, and Health, each running on real GitHub events with one Claude call per event under a strict token ceiling. It includes the Transparent Disagreement Protocol that surfaces cross agent conflict in plain language, the Daily Digest that posts a single morning summary to GitHub, ChromaDB shared memory with per agent namespaced collections, Supabase persistence that records every verdict before any GitHub write, the drop in GitHub Action template that installs OpenHive on any public repository, the Next.js frontend dashboard, and a Render deployment with a live metrics endpoint. This release was built for the Microsoft Build AI 2026 hackathon.
+
+## Architecture decisions
+
+Three decisions shaped the system more than any others. The first was using LangGraph instead of raw LangChain chains, because LangGraph provides per event state isolation that prevents concurrent webhook events from corrupting each other's state, which matters the moment more than one repository event arrives at the same time. The second was writing every verdict to Supabase before any GitHub API write rather than after, because this guarantees that every action OpenHive takes is auditable even if the GitHub API call subsequently fails, so the record of intent always exists before the side effect. The third was using ChromaDB with per agent namespaced collections rather than a single shared collection, because namespace isolation prevents one agent's writes from appearing in another agent's semantic search results, which keeps each agent's memory clean while still allowing deliberate cross agent reads through the consensus layer.
+
+## Known limitations
+
+Three limitations are worth stating plainly. The first is that the Render free tier causes cold starts of up to sixty seconds after periods of inactivity, so the first request following an idle window is slow even though steady state latency is well within budget. The second is that the Transparent Disagreement Protocol compares verdicts across different events on the same repository rather than verdicts from multiple agents on a single event, which means the comparison is across time rather than truly simultaneous, and a future version would evaluate several agents on one event before acting. The third is that the GitHub Action template uses a single shared webhook secret across all repositories that install OpenHive rather than per installation secrets, which is appropriate for single operator deployments but would require a GitHub App architecture to achieve true multi tenant isolation.

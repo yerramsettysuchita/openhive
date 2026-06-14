@@ -21,6 +21,7 @@ output tokens. The comment is composed locally from the structured result.
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -28,6 +29,7 @@ import httpx
 from anthropic import Anthropic
 from github import Github
 
+from backend.metrics import record_claude_call
 from backend.persistence import save_verdict
 from consensus.protocol import disagreement_note_for
 from memory.chroma_store import write_finding, read_cross_agent
@@ -176,6 +178,7 @@ def pr_review_node(state: dict) -> dict:
             return {"errors": errors}
 
     # Step 3: one Claude call.
+    _t0 = time.perf_counter()
     message = _client().messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
@@ -190,6 +193,7 @@ def pr_review_node(state: dict) -> dict:
             }
         ],
     )
+    record_claude_call("pr_review", message.usage.input_tokens, message.usage.output_tokens, (time.perf_counter() - _t0) * 1000)
     print(
         f"[TOKEN USE] pr_review input={message.usage.input_tokens} "
         f"output={message.usage.output_tokens}"

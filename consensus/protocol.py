@@ -16,6 +16,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Optional
 
+from backend.metrics import record_disagreement
 from backend.persistence import save_verdict, get_recent_repo_verdicts
 
 
@@ -238,7 +239,7 @@ def log_disagreement(disagreement: dict, repo_full_name: str) -> bool:
     """Persist a consensus result to Supabase under agent_name 'consensus'."""
     finding_id = f"consensus-{uuid.uuid4().hex[:8]}"
     classification = "disagreement" if disagreement.get("disagreement_detected") else "agreement"
-    return save_verdict(
+    saved = save_verdict(
         repo_full_name,
         "consensus",
         "consensus",
@@ -247,3 +248,5 @@ def log_disagreement(disagreement: dict, repo_full_name: str) -> bool:
         classification=classification,
         confidence=disagreement.get("confidence_delta"),
     )
+    record_disagreement()
+    return saved

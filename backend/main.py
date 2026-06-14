@@ -108,3 +108,12 @@ def swarm_status(repo: str):
         else:
             status[agent] = {"last_seen": None, "classification": None, "active": False}
     return status
+
+
+@app.get("/metrics")
+def metrics():
+    """Live operational metrics: webhook volume, Claude usage and cost, per-agent
+    latency, disagreements surfaced, and patch PRs opened."""
+    from backend.metrics import get_metrics
+
+    return get_metrics()

@@ -23,6 +23,7 @@ TOKEN DISCIPLINE: Claude is called ONLY when vulnerabilities exist, capped at
 import json
 import os
 import re
+import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -30,6 +31,7 @@ import httpx
 from anthropic import Anthropic
 from github import Github
 
+from backend.metrics import record_claude_call, record_patch_pr
 from backend.persistence import save_verdict
 from backend.gh_files import changed_files
 from memory.chroma_store import write_finding
@@ -234,12 +236,14 @@ def security_node(state: dict) -> dict:
         f"- {v['package']}=={v['version']} | {v['cve'] or v['id']} | severity {v['severity'] or 'n/a'} | {v['summary']}"
         for v in vulnerabilities
     )
+    _t0 = time.perf_counter()
     message = _client().messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
         system=SECURITY_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": f"Vulnerabilities found:\n{vuln_text}"}],
     )
+    record_claude_call("security", message.usage.input_tokens, message.usage.output_tokens, (time.perf_counter() - _t0) * 1000)
     print(
         f"[TOKEN USE] security input={message.usage.input_tokens} "
         f"output={message.usage.output_tokens}"
@@ -324,6 +328,7 @@ def security_node(state: dict) -> dict:
         pr_description = pr_description.replace("—", ", ").replace("–", ", ").replace(" , ", ", ").replace("  ", " ").strip()
         pr = repo.create_pull(title=title, body=pr_description, head=branch, base=default_branch)
         print(f"[OPENHIVE] Patch PR opened: {pr.html_url} ({changed_count} line(s) changed)")
+        record_patch_pr()
 
         try:
             existing = {l.name for l in repo.get_labels()}

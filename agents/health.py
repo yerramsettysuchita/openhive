@@ -17,6 +17,7 @@ TOKEN DISCIPLINE: exactly ONE Claude call per scheduled run, capped at 400.
 
 import json
 import os
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -24,6 +25,7 @@ import httpx
 from anthropic import Anthropic
 from github import Github
 
+from backend.metrics import record_claude_call
 from backend.persistence import save_verdict
 from memory.chroma_store import write_finding
 
@@ -168,12 +170,14 @@ def health_node(state: dict) -> dict:
 
     # Step 2: one Claude call.
     metric_text = "\n".join(f"{k}: {v}" for k, v in metrics.items())
+    _t0 = time.perf_counter()
     message = _client().messages.create(
         model=CLAUDE_MODEL,
         max_tokens=MAX_TOKENS,
         system=HEALTH_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": f"Repository metrics:\n{metric_text}"}],
     )
+    record_claude_call("health", message.usage.input_tokens, message.usage.output_tokens, (time.perf_counter() - _t0) * 1000)
     print(
         f"[TOKEN USE] health input={message.usage.input_tokens} "
         f"output={message.usage.output_tokens}"
